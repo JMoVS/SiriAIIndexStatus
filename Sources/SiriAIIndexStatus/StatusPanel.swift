@@ -5,6 +5,7 @@ import SwiftUI
 struct StatusPanel: View {
     let store: StatusStore
     @State private var expanded: Set<String> = []
+    @State private var showingSchedule = false
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
@@ -95,8 +96,21 @@ struct StatusPanel: View {
                 } else {
                     Text("Never reported")
                 }
-                Text("macOS refreshes these figures roughly daily.")
-                    .foregroundStyle(.tertiary)
+                HStack(spacing: 4) {
+                    Text("macOS refreshes these figures daily.")
+                        .foregroundStyle(.tertiary)
+                    Button {
+                        showingSchedule.toggle()
+                    } label: {
+                        Image(systemName: "info.circle")
+                            .foregroundStyle(.tertiary)
+                    }
+                    .buttonStyle(.plain)
+                    .help("When these figures update")
+                    .popover(isPresented: $showingSchedule, arrowEdge: .bottom) {
+                        schedulePopover
+                    }
+                }
             }
             .font(.caption)
             .foregroundStyle(.secondary)
@@ -106,6 +120,64 @@ struct StatusPanel: View {
             Button("Refresh") { Task { await store.refresh() } }
                 .disabled(store.isRefreshing)
             Button("Quit") { NSApplication.shared.terminate(nil) }
+        }
+    }
+
+    /// Everything here is measured, not guessed — the schedule is declared in
+    /// `com.apple.spotlightknowledged.updater.plist`; see
+    /// `docs/notes/20260812-what-schedules-the-completeness-reports.md`.
+    ///
+    /// The last point is the one worth the popover: "Refresh" re-reads the files on disk, which is
+    /// not what most people will assume it does, and there is no button anywhere on the system that
+    /// does the other thing.
+    private var schedulePopover: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            Text("When these figures update")
+                .font(.callout.weight(.semibold))
+
+            VStack(alignment: .leading, spacing: 7) {
+                schedulePoint(
+                    "calendar",
+                    "Once a day. macOS runs a background task every 24 hours to write these reports; "
+                        + "between runs the numbers do not move, however hard the indexer is working."
+                )
+                schedulePoint(
+                    "powerplug",
+                    "Only while plugged in. The task requires external power, so on battery the "
+                        + "figures stay frozen — an unchanged percentage then says nothing about indexing."
+                )
+                schedulePoint(
+                    "lock.open",
+                    "The Mac must have been unlocked since it last started up."
+                )
+                schedulePoint(
+                    "clock.badge.exclamationmark",
+                    "24 hours is the shortest interval, not a promise. macOS runs the task at low "
+                        + "priority and defers it under load."
+                )
+            }
+
+            Divider()
+
+            Text("Refresh re-reads the reports already on disk. Nothing can ask macOS to write new "
+                 + "ones — the system blocks that even with administrator rights.")
+                .font(.caption)
+                .foregroundStyle(.secondary)
+                .fixedSize(horizontal: false, vertical: true)
+        }
+        .padding(14)
+        .frame(width: 330, alignment: .leading)
+    }
+
+    private func schedulePoint(_ symbol: String, _ text: String) -> some View {
+        HStack(alignment: .top, spacing: 7) {
+            Image(systemName: symbol)
+                .font(.caption)
+                .foregroundStyle(.secondary)
+                .frame(width: 14, alignment: .center)
+            Text(text)
+                .font(.caption)
+                .fixedSize(horizontal: false, vertical: true)
         }
     }
 
