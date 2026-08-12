@@ -1,0 +1,101 @@
+# XcodeGen spec — the source of truth for SiriAIIndexStatus.xcodeproj (ADR-0005).
+#
+# WidgetKit needs an .appex embedded in the host app under Contents/PlugIns/, which SwiftPM cannot
+# produce, so the bundle is built by Xcode. SwiftPM still owns SiriIndexCore and the tests: this
+# project consumes the package rather than duplicating its sources, so `swift test` and the shipped
+# app compile the same arithmetic (ADR-0001).
+#
+# Regenerate with `xcodegen generate` (or just run Scripts/make-app-bundle.sh, which does it).
+name: SiriAIIndexStatus
+
+options:
+  bundleIdPrefix: de.justinscholz
+  deploymentTarget:
+    # The completeness reports do not exist before macOS 26.6 (ADR-0002) — an older system builds a
+    # working app with nothing to show.
+    macOS: "26.6"
+  createIntermediateGroups: true
+  groupSortPosition: top
+
+settings:
+  base:
+    SWIFT_VERSION: "6.0"
+    MARKETING_VERSION: "0.1.0"
+    CURRENT_PROJECT_VERSION: "1"
+    DEVELOPMENT_TEAM: 5CYP2XRG73
+    CODE_SIGN_STYLE: Automatic
+    ENABLE_HARDENED_RUNTIME: YES
+    # The report directory is TCC-protected and the app is the only thing that reads it, so the
+    # host app is deliberately unsandboxed (ADR-0004). The widget extension is sandboxed — it has
+    # to be — and reaches the data only through the App Group.
+    ENABLE_USER_SCRIPT_SANDBOXING: NO
+    DEAD_CODE_STRIPPING: YES
+
+packages:
+  SiriIndexCore:
+    path: .
+
+targets:
+  SiriAIIndexStatus:
+    type: application
+    platform: macOS
+    sources:
+      - path: Sources/SiriAIIndexStatus
+    dependencies:
+      - package: SiriIndexCore
+        product: SiriIndexCore
+      - target: SiriAIIndexStatusWidget
+        embed: true
+        codeSign: true
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: de.justinscholz.SiriAIIndexStatus
+        PRODUCT_NAME: SiriAIIndexStatus
+        ENABLE_APP_SANDBOX: NO
+        COMBINE_HIDPI_IMAGES: YES
+    info:
+      path: Sources/SiriAIIndexStatus/Info.plist
+      properties:
+        CFBundleName: Siri AI Index Status
+        CFBundleDisplayName: Siri AI Index Status
+        CFBundlePackageType: APPL
+        LSMinimumSystemVersion: "26.6"
+        # Menu bar accessory: no Dock icon, no app switcher entry.
+        LSUIElement: true
+        NSHumanReadableCopyright: Justin Scholz
+    entitlements:
+      path: Sources/SiriAIIndexStatus/SiriAIIndexStatus.entitlements
+      properties:
+        com.apple.security.application-groups:
+          - 5CYP2XRG73.de.justinscholz.SiriAIIndexStatus
+
+  SiriAIIndexStatusWidget:
+    type: app-extension
+    platform: macOS
+    sources:
+      - path: Sources/SiriAIIndexStatusWidget
+    dependencies:
+      - package: SiriIndexCore
+        product: SiriIndexCore
+      - sdk: WidgetKit.framework
+      - sdk: SwiftUI.framework
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: de.justinscholz.SiriAIIndexStatus.widget
+        PRODUCT_NAME: SiriAIIndexStatusWidget
+        SKIP_INSTALL: YES
+    info:
+      path: Sources/SiriAIIndexStatusWidget/Info.plist
+      properties:
+        CFBundleName: Semantic Index
+        CFBundleDisplayName: Semantic Index
+        CFBundlePackageType: XPC!
+        NSExtension:
+          # SwiftUI widgets declare their entry point with @main, so there is no principal class.
+          NSExtensionPointIdentifier: com.apple.widgetkit-extension
+    entitlements:
+      path: Sources/SiriAIIndexStatusWidget/SiriAIIndexStatusWidget.entitlements
+      properties:
+        com.apple.security.app-sandbox: true
+        com.apple.security.application-groups:
+          - 5CYP2XRG73.de.justinscholz.SiriAIIndexStatus

@@ -1,0 +1,17 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(rg:*)",
+      "Bash(swift build:*)",
+      "Bash(swift test:*)",
+      "Bash(git diff:*)",
+      "Bash(git status)",
+      "Bash(git add:*)",
+      "Bash(git log:*)",
+      "Bash(plutil:*)",
+      "Bash(pgrep:*)",
+      "Bash(lsof:*)",
+      "Bash(Scripts/make-app-bundle.sh:*)"
+    ]
+  }
+}

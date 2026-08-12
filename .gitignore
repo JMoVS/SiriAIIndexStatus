@@ -1,0 +1,18 @@
+.DS_Store
+
+# SwiftPM build products & local metadata
+.build/
+.swiftpm/
+build/
+
+# Xcode per-user state; the generated .xcodeproj itself is committed (ADR-0005)
+xcuserdata/
+*.xcuserdatad/
+
+# Claude Code local state
+.claude/settings.local.json
+.claude/agent-memory/
+.worktrees/
+
+__pycache__/
+*.pyc
