@@ -7,12 +7,11 @@ Work the first unblocked item, top down. **Delete an item when it ships** — no
 
 ## Owed
 
-### WL-5 — Widget is built and registered but has never rendered real numbers
-- Blocked on the operator: the signature changed ad-hoc → Apple Development, so the Full Disk Access
-  grant was invalidated (ADR-0004 predicted this). Until it is re-granted the app publishes a
-  snapshot whose only content is the permission error, and the widget has nothing to draw.
-- After the grant: add the widget from the gallery ("Semantic Index"), confirm small and medium
-  render, and confirm the app-not-running footer by quitting the app for an hour.
+### WL-6 — Widget states other than "everything works" are unverified
+- Medium renders real numbers. Still never seen on screen: the small family, the "App not running"
+  footer (needs the app quit for an hour), and the failure text after a snapshot write error.
+- Cheap once the layout settles; the medium layout was already clipping its title and age line
+  before anyone looked at it, which is the argument for looking at the rest.
 
 ### WL-2 — Report freshness is invisible until you open the panel
 - Reports refresh roughly daily, so a menu bar reading can be a day stale with no signal.

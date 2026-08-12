@@ -59,40 +59,57 @@ struct IndexStatusWidgetView: View {
     let entry: IndexStatusEntry
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            HStack {
+        Group {
+            if family == .systemSmall || entry.status.headline == nil {
+                summary
+            } else {
+                // Two columns rather than one tall stack: the headline, the four supporting
+                // pipelines and the age line do not fit above one another in a medium widget, and
+                // a VStack that overflows silently drops the title and the age — the two parts
+                // that say what the number is and how old it is.
+                HStack(alignment: .top, spacing: 12) {
+                    summary
+                        .frame(width: 118, alignment: .leading)
+                    Divider()
+                    pipelineList
+                }
+            }
+        }
+        .containerBackground(.fill.tertiary, for: .widget)
+    }
+
+    private var summary: some View {
+        VStack(alignment: .leading, spacing: 4) {
+            HStack(spacing: 4) {
                 Text("Semantic Index")
                     .font(.caption.weight(.semibold))
-                Spacer()
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.8)
+                Spacer(minLength: 0)
                 if entry.status.updaterRunning {
                     Image(systemName: "arrow.trianglehead.2.clockwise")
                         .font(.caption2)
                         .foregroundStyle(.secondary)
+                        .help("Indexer running")
                 }
             }
 
             if let headline = entry.status.headline {
                 Text(Formatting.percent(headline.completeness))
-                    .font(.system(size: family == .systemSmall ? 30 : 38, weight: .semibold, design: .rounded))
+                    .font(.system(size: family == .systemSmall ? 34 : 30, weight: .semibold, design: .rounded))
                     .monospacedDigit()
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.6)
+                // The big number belongs to one pipeline, not to the index as a whole — unlabelled
+                // beside a list of four other pipelines it reads as a total (ADR-0003).
+                Text(headline.shortDisplayName)
+                    .font(.caption2.weight(.medium))
+                    .lineLimit(1)
                 Text("\(Formatting.itemCount(headline.eligibleItems)) items")
                     .font(.caption2)
                     .foregroundStyle(.secondary)
-
-                if family != .systemSmall {
-                    Divider()
-                    ForEach(entry.status.pipelines.prefix(4)) { pipeline in
-                        HStack {
-                            Text(pipeline.displayName)
-                                .font(.caption2)
-                                .lineLimit(1)
-                            Spacer()
-                            Text(Formatting.percent(pipeline.completeness))
-                                .font(.caption2.monospacedDigit())
-                                .foregroundStyle(.secondary)
-                        }
-                    }
-                }
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.8)
             } else if let failure = entry.failure {
                 Text(failure)
                     .font(.caption2)
@@ -108,7 +125,24 @@ struct IndexStatusWidgetView: View {
 
             footer
         }
-        .containerBackground(.fill.tertiary, for: .widget)
+    }
+
+    private var pipelineList: some View {
+        VStack(alignment: .leading, spacing: 5) {
+            ForEach(entry.status.supporting) { pipeline in
+                HStack(spacing: 6) {
+                    Text(pipeline.shortDisplayName)
+                        .font(.caption2)
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.8)
+                    Spacer(minLength: 4)
+                    Text(Formatting.percent(pipeline.completeness))
+                        .font(.caption2.monospacedDigit())
+                        .foregroundStyle(.secondary)
+                }
+            }
+            Spacer(minLength: 0)
+        }
     }
 
     /// Two different kinds of "old" share this line, and only one of them is about indexing:

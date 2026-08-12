@@ -32,6 +32,9 @@ public struct PipelineProgress: Sendable, Hashable, Identifiable, Codable {
 
     public var displayName: String { DisplayNames.pipeline(for: pipeline) }
 
+    /// For the widget, where the full name does not fit beside a percentage.
+    public var shortDisplayName: String { DisplayNames.shortPipeline(for: pipeline) }
+
     public init(
         pipeline: String,
         completeness: Double,
@@ -81,6 +84,16 @@ public struct IndexStatus: Sendable, Hashable, Codable {
 
     public var headline: PipelineProgress? {
         pipelines.first { $0.pipeline == Self.headlinePipeline } ?? pipelines.first
+    }
+
+    /// Every pipeline the headline is not already showing.
+    ///
+    /// Listing all of them next to the headline figure would print one pipeline twice, and which
+    /// one gets duplicated depends on the sort order — `pipelines` is sorted by completeness, so
+    /// the duplicate moves as the numbers move. The exclusion has to be by identity.
+    public var supporting: [PipelineProgress] {
+        guard let headline else { return [] }
+        return pipelines.filter { $0.id != headline.id }
     }
 
     public var isComplete: Bool {

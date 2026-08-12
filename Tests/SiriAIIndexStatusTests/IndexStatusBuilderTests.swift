@@ -31,6 +31,47 @@ final class IndexStatusBuilderTests: XCTestCase {
         XCTAssertFalse(embedding?.headlineIsDerived ?? true)
     }
 
+    /// The widget draws the headline as a big number and `supporting` as the list beside it. When
+    /// the headline pipeline is not the last one by completeness, taking the first four of
+    /// `pipelines` prints it in both places and silently drops another — which is what a
+    /// `prefix(4)` did until the real numbers happened to hide it (Embedding sorted last).
+    func testSupportingExcludesTheHeadlineWhereverItSortsByCompleteness() {
+        let status = IndexStatusBuilder.build(
+            from: [
+                row("Embedding", "all", 0.10, 200_000),
+                row("Keyphrase", "all", 0.20, 100_000),
+                row("LSSR5EventsandordersUrgent", "all", 0.30, 90_000),
+                row("LSSR5EventsandordersBackground", "all", 0.40, 148_000),
+                row("LSSR5IdentificationdocumentsBackground", "all", 0.50, 7_000),
+            ],
+            updaterRunning: false
+        )
+
+        XCTAssertEqual(status.headline?.pipeline, "Embedding", "Embedding is the headline (ADR-0003)")
+        XCTAssertEqual(status.supporting.count, 4)
+        XCTAssertFalse(
+            status.supporting.contains { $0.pipeline == "Embedding" },
+            "the headline pipeline must not also appear in the list beside it"
+        )
+        XCTAssertEqual(
+            Set(status.supporting.map(\.pipeline)) .union(["Embedding"]),
+            Set(status.pipelines.map(\.pipeline)),
+            "and no other pipeline may be dropped to make room"
+        )
+    }
+
+    func testEveryObservedPipelineHasAShortNameForTheWidget() {
+        for pipeline in [
+            "Embedding", "Keyphrase", "LSSR5EventsandordersUrgent",
+            "LSSR5EventsandordersBackground", "LSSR5IdentificationdocumentsBackground",
+        ] {
+            let short = DisplayNames.shortPipeline(for: pipeline)
+            XCTAssertFalse(short.isEmpty)
+            XCTAssertLessThanOrEqual(short.count, 18, "\(short) will not fit a widget row")
+            XCTAssertFalse(short.contains("LSSR5"), "\(pipeline) fell through to the raw identifier")
+        }
+    }
+
     func testHeadlineFallsBackToItemWeightedMeanWhenAggregateRowIsAbsent() {
         let status = IndexStatusBuilder.build(
             from: [

@@ -16,6 +16,20 @@ public enum DisplayNames {
         return splitCamelCase(identifier.replacingOccurrences(of: "LSSR5", with: ""))
     }
 
+    /// Same pipelines, named for a widget row rather than a menu — roughly 18 characters before the
+    /// percentage on the right starts losing its column.
+    private static let shortPipelines: [String: String] = [
+        "Embedding": "Embedding",
+        "Keyphrase": "Keyphrases",
+        "LSSR5EventsandordersUrgent": "Events (urgent)",
+        "LSSR5EventsandordersBackground": "Events (backgr.)",
+        "LSSR5IdentificationdocumentsBackground": "ID documents",
+    ]
+
+    public static func shortPipeline(for identifier: String) -> String {
+        shortPipelines[identifier] ?? pipeline(for: identifier)
+    }
+
     private static let apps: [String: String] = [
         "all": "All apps",
         "com.apple.mail": "Mail",
