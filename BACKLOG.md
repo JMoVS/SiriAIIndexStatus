@@ -36,6 +36,20 @@ Work the first unblocked item, top down. **Delete an item when it ships** — no
   4,010/4,010 pending, yet appears in both LSSR5 allow-lists. If it does read content where
   third-party providers cannot, the two are not the same case and WL-8's wording is wrong.
 
+### WL-10 — Prove the index works, rather than only reporting a percentage
+- `CSUserQuery` runs a semantic query against the index CoreSpotlight built. A "try a search" field
+  in the panel would show whether 48.7% of Embedding actually retrieves anything sensible — a
+  question the percentage cannot answer.
+- Also the only supported way to see what the indexer produced: the embedding stores themselves are
+  an undocumented binary format (`docs/notes/20260812-embedding-store-format.md`).
+- Check first whether `CSUserQuery` semantic ranking needs an entitlement; if it does, this dies.
+
+### WL-11 — The embedding store looks like it rolled over at exactly 100,000
+- `4/cs_pc_c` stopped at 100,000 records on 2026-08-05 and `10/4/cs_pc_c` has been growing since.
+  If that is a per-store cap rather than a coincidence, the completeness percentage may be measured
+  against something that resets, and "100%" would not mean what the panel implies.
+- Cheap test: watch whether `10/4/cs_pc_c` also stops at 100,000. It is at 23,470.
+
 ### WL-2 — Report freshness is invisible until you open the panel
 - Reports refresh roughly daily, so a menu bar reading can be a day stale with no signal.
 - Show staleness in the menu bar title itself once it exceeds ~36 h (dim the text, or append `?`).
