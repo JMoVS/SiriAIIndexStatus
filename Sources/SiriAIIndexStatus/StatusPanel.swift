@@ -91,19 +91,19 @@ struct StatusPanel: View {
     private var footer: some View {
         HStack {
             VStack(alignment: .leading, spacing: 2) {
-                if let age = store.status.age() {
-                    Text("Reported \(Formatting.age(age))")
-                } else {
-                    Text("Never reported")
-                }
+                // The info button rides the short line, not the sentence below it: the sentence is
+                // the first thing to be truncated when the buttons claim their width, and a control
+                // that disappears at narrow widths is worse than no control.
                 HStack(spacing: 4) {
-                    Text("macOS refreshes these figures daily.")
-                        .foregroundStyle(.tertiary)
+                    if let age = store.status.age() {
+                        Text("Reported \(Formatting.age(age))")
+                    } else {
+                        Text("Never reported")
+                    }
                     Button {
                         showingSchedule.toggle()
                     } label: {
                         Image(systemName: "info.circle")
-                            .foregroundStyle(.tertiary)
                     }
                     .buttonStyle(.plain)
                     .help("When these figures update")
@@ -111,11 +111,15 @@ struct StatusPanel: View {
                         schedulePopover
                     }
                 }
+                Text("macOS refreshes these figures daily.")
+                    .foregroundStyle(.tertiary)
+                    .fixedSize(horizontal: false, vertical: true)
             }
             .font(.caption)
             .foregroundStyle(.secondary)
+            .layoutPriority(1)
 
-            Spacer()
+            Spacer(minLength: 8)
 
             Button("Refresh") { Task { await store.refresh() } }
                 .disabled(store.isRefreshing)
