@@ -79,6 +79,8 @@ the app publishes a snapshot into a shared App Group container and the widget re
 It follows that the widget is blank until the app has run once, and says "App not running" rather
 than showing a stale figure as if it were live.
 
+MIT licensed — see [LICENSE](LICENSE).
+
 Requires **macOS 26.6 or later**. That is the floor because it is where the completeness reports
 first appear — on anything older the app builds and runs but has nothing to read. No third-party
 dependencies.
