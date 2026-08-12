@@ -310,7 +310,10 @@ under pressure rather than pinned — inference from the documented default, not
   further down the pipe. Use `awk 'NR%n==0'`.
 - **Do not `find`/`lsof +D` a File Provider tree.** `find "$NC" -type f` and `lsof +D ~/Library/CloudStorage`
   both hit 5-minute timeouts driving provider enumeration and Nextcloud CPU. Sample from `mdfind`
-  output instead, or stat individual paths.
+  output instead, or stat individual paths. Worse, backgrounding one does not make it cheap: a
+  `find` over three Nextcloud subtrees was still walking ~40 min later and had to be killed by pid.
+  The cost is the provider's `readdir`, not the tool — note that in this shell `find` is a function
+  wrapping `bfs`, so `/usr/bin/find` will behave no better.
 - **`<private>` redaction is heavy but incomplete.** Item names are redacted with a
   first-char/count/last-char scheme (`n:"O{7}s.ofocus"`), item counts in `[spotlight] adding N` are
   clear, and the LSSR5 query strings are fully clear. The Embedding pipeline's item identities are
