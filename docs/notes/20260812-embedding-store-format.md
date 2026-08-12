@@ -62,6 +62,30 @@ A 3 MB sample of the 220 MB store yields 3,936 printable runs of ≥6 characters
 words — all high-entropy noise. The indexed source text is not sitting in this file in the clear.
 The plaintext that does exist is in the sidecar maps and is schema, not content (`embedding_info`).
 
+Read that narrowly. It means the file is not a *shortcut* to your content; it does not mean the file
+is harmless. Embedding inversion is a real technique — approximate source text can be recovered from
+vectors — so these stores should be treated as derived personal data, not as anonymised.
+
+**But they do not widen the attack surface**, because the gate in front of them is the same gate in
+front of the originals:
+
+| path | mode | reachable with |
+| --- | --- | --- |
+| `…/embedding_cache/…/embedding_store.db` | `600` | Full Disk Access |
+| `~/Library/Mail` | `700` | Full Disk Access |
+| `~/Library/Messages/chat.db` | `644` | Full Disk Access |
+| `~/Library/Group Containers/group.com.apple.notes` | `700` | Full Disk Access |
+
+All are the user's own uid behind TCC. Anything that can read the embeddings of your mail can read
+your mail — losslessly, and with far less effort than decoding `8tsd` would take. The embeddings are
+strictly the weaker prize.
+
+So the risk here is Full Disk Access itself, which is exactly why macOS makes it manual, per-app and
+unpromptable (ADR-0004) — and why granting it to *this* app deserves the same suspicion as granting
+it to any other. For the record: this app reads `PipelineCompletenessReporting/*.plist` and nothing
+else. It has never opened an embedding store; the exploration behind this note was done from a
+shell, not from the app.
+
 ## The supported route
 
 CoreSpotlight ships `CSUserQuery`, which queries this index semantically and returns items. That
