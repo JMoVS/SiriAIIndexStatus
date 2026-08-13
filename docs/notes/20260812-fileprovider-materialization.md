@@ -68,6 +68,30 @@ below.
 
 ---
 
+### 1b. Cross-check: the split is visible in the reports themselves
+
+**(O)** Added 2026-08-13, from the report dated `2026-08-12T08:09:27Z`. Both third-party providers
+appear in `Embedding` and in **no other pipeline**:
+
+| pipeline | provider rows | all rows |
+| --- | --- | --- |
+| `Embedding` | `com.nextcloud.desktopclient` 98.94 % / 38,832 · `io.mountainduck` 98.59 % / 496 | 20 |
+| `Keyphrase` | none | 9, all `com.apple.*` |
+| `LSSR5EventsandordersUrgent` | none | 1 |
+| `LSSR5EventsandordersBackground` | none | 3 |
+| `LSSR5IdentificationdocumentsBackground` | none | 2 |
+
+This is independent confirmation of the hard-coded allow-list found in the LSSR5 query strings
+(section 5): third-party File Provider domains are absent from every LSSR5 pipeline, by bundle
+identity, while being present in `Embedding`. Two providers from different vendors behaving
+identically also rules out a Nextcloud-specific quirk.
+
+It does **not** show that contents are read. A provider row near 99 % in `Embedding` means ~99 % of
+the *donations the provider made* have been embedded, and section 3 establishes those donations were
+built without reading a byte of file content.
+
+---
+
 ## 2. Documented contract
 
 **(D)** `NSFileProviderReplicatedExtension` requires `fetchContents(for:version:request:completionHandler:)`
