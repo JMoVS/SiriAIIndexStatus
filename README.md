@@ -4,6 +4,13 @@
 [![macOS 26.6+](https://img.shields.io/badge/macOS-26.6%2B-black?logo=apple)](#install)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 
+> [!IMPORTANT]
+> **Not affiliated with Apple.** This is an independent, unofficial, community-built project. It is
+> not made, endorsed, sponsored, supported, or reviewed by Apple Inc. in any way. Apple,
+> Apple Intelligence, Siri, Spotlight, macOS, iOS, iPadOS, Mac, and iPhone are trademarks of
+> Apple Inc., used here only to describe what this app reads and which system it runs on — nominative
+> use, no claim of ownership or association. See [Trademarks and affiliation](#trademarks-and-affiliation).
+
 **Is Apple Intelligence finished indexing my Mac yet?** On iPhone, Settings tells you — indexing
 progress is right there in the UI. On macOS, Apple built no such screen. This is that missing UI: a
 menu bar app that answers the question in one glance.
@@ -110,5 +117,31 @@ showing a stale figure as if it were live.
 No third-party dependencies. The formats this app reads are private to Apple and undocumented; every
 value we derived from one has a test with the real observed numbers in it, which is how we will find
 out when Apple changes something.
+
+## Trademarks and affiliation
+
+This project is **independent and unofficial**. It is not made by, affiliated with, authorised by,
+endorsed by, sponsored by, supported by, or in any way officially connected to Apple Inc., nor to
+any of its subsidiaries or affiliates. Nothing here is an official Apple product or communication,
+and nothing here should be read as Apple's statement about how its software behaves.
+
+Apple, Apple Intelligence, Siri, Spotlight, CoreSpotlight, macOS, iOS, iPadOS, Mac, iPhone and iPad
+are trademarks or registered trademarks of Apple Inc., registered in the U.S. and other countries.
+They appear in this repository — including in the project's name — only to identify the software
+this app observes and the platform it runs on. That is nominative use for the purpose of accurate
+description; no claim of ownership, association, or origin is made or intended. All trademarks
+remain the property of their respective owners.
+
+The app reads files that macOS writes on your own machine, using public API only. It does not
+modify, circumvent, reverse engineer for redistribution, or reimplement any Apple software, and it
+writes nothing outside its own container. The formats it reads are private to Apple and undocumented;
+everything this project claims about them is an observation recorded in `docs/notes/`, may be
+incomplete or wrong, and may stop being true whenever Apple changes something. Nothing here is
+supported by Apple and none of it comes with any warranty — see [LICENSE](LICENSE).
+
+If you are Apple and something here is a problem, please
+[open an issue](https://github.com/JMoVS/SiriAIIndexStatus/issues) and it will be addressed.
+
+## License
 
 MIT licensed — see [LICENSE](LICENSE).
