@@ -1,86 +1,105 @@
 # SiriAIIndexStatus
 
-A macOS menu bar app that shows how far along Apple Intelligence's on-device semantic index is.
+**Is Apple Intelligence finished indexing my Mac yet?** macOS 26 answers that question nowhere. This
+menu bar app answers it in one glance.
 
-macOS 26 builds this index in the background — the vector store that makes Spotlight and Siri search
-by meaning — but ships no UI for its progress. CoreSpotlight already writes the numbers to disk;
-this app reads them.
+Semantic search — Spotlight and Siri finding things by *meaning* rather than by filename — only works
+once macOS has built a vector index of your mail, files, calendar, and messages. That happens quietly
+in the background over days, and there is no progress bar, no settings pane, nothing. Yet macOS
+writes the numbers to disk. This app reads them and puts the percentage in your menu bar.
 
-## What it shows
+## What you see
 
-- **Menu bar:** the Embedding pipeline's percentage — the vector index, the one that gates semantic
-  search working at all.
-- **Panel:** every pipeline (Embedding, Keyphrases, Events & orders, ID documents) with its
-  percentage, item count, and a per-app breakdown ranked by *remaining* work.
-- **Indexer state:** whether `spotlightknowledged.updater` is running right now.
-- **Report age:** the figures are checkpoints macOS refreshes roughly daily, not a live feed, so the
-  panel always says how old they are.
-- **Desktop widget:** small and medium, from the widget gallery under **Semantic Index**.
+- **In the menu bar:** one percentage — how much of your content has been embedded. This is the one
+  that gates semantic search working at all.
+- **In the panel:** every indexing pipeline (embeddings, keyphrases, events & orders, ID documents),
+  with a per-app breakdown — Mail, Calendar, Notes, Messages, iCloud Drive, third-party cloud
+  storage — ranked by how much work is left.
+- **Whether it is working right now:** the app shows whether the indexer process is running.
+- **How fresh the figures are:** macOS refreshes these numbers roughly once a day, so they are
+  checkpoints, not a live feed. The panel always tells you how old they are — a figure that has not
+  moved in three days means macOS has not run the job, not that nothing is happening.
+- **A desktop widget** (small and medium), if you would rather keep an eye on it from the desktop.
 
-## Build and install
+Nothing leaves your Mac. The app reads local files, makes no network connections, and writes only
+inside its own container.
+
+## Install
+
+There is no signed download yet, so you build it — two commands, and you need Xcode installed:
 
 ```sh
-swift test                              # 11 tests, ~10 s — SiriIndexCore, the fast inner loop
-Scripts/make-app-bundle.sh release      # → build/SiriAIIndexStatus.app, widget included
+Scripts/make-app-bundle.sh release      # → build/SiriAIIndexStatus.app
 open build/SiriAIIndexStatus.app
 ```
 
-The bundle is built by Xcode, not SwiftPM: WidgetKit only finds a widget shipped as an `.appex`
-inside the host app, which SwiftPM cannot produce (ADR-0005). `project.yml` is the source of truth
-and [XcodeGen](https://github.com/yonaskolb/XcodeGen) regenerates `SiriAIIndexStatus.xcodeproj` from
-it; the `.xcodeproj` is committed, so a clone builds with Xcode alone.
-
-**Building under your own Apple Developer team** means replacing the team ID and App Group in four
-places, which must agree: `project.yml` (`DEVELOPMENT_TEAM` and both entitlement blocks),
-`Sources/SiriAIIndexStatus/SiriAIIndexStatus.entitlements`,
-`Sources/SiriAIIndexStatusWidget/SiriAIIndexStatusWidget.entitlements`, and
-`SnapshotStore.appGroupID`. macOS app group IDs must start with your team ID.
-
-Move the bundle somewhere stable (`/Applications`) before granting access — the permission is tied
-to the app's location and signature.
+Move the app to **/Applications** before the next step. Full Disk Access is tied to where the app
+lives and how it is signed, so granting it and *then* moving the app invalidates the grant.
 
 ## Grant Full Disk Access (required)
 
-The reports live in `~/Library/Metadata/CoreSpotlight/`, which macOS protects with TCC. Without
-access the app shows an empty panel and a button to fix it.
+The numbers live in a folder macOS protects (`~/Library/Metadata/CoreSpotlight/`). Until you allow
+access, the app shows an empty panel with a button that takes you to the right settings pane.
 
 1. **System Settings → Privacy & Security → Full Disk Access**
-2. **+**, then select `SiriAIIndexStatus.app`
-3. **Quit and reopen the app** — macOS does not hand the new permission to a running process.
+2. Click **+** and pick `SiriAIIndexStatus.app`
+3. **Quit and reopen the app.** macOS does not hand the new permission to an already-running app.
 
-There is no way for the app to request this itself; Full Disk Access has no prompt API. If you
-re-sign the bundle with a different identity, the grant is invalidated and must be redone.
-
-Note that a terminal with Full Disk Access can read these files, which is why command-line probing
-works before the app does.
+The app cannot ask for this itself — Full Disk Access has no prompt, by Apple's design. That is also
+why the app cannot do anything sneaky with the access: the source is right here, and it is
+read-only.
 
 ## Reading the numbers
 
-Percentages are per pipeline, over the items that pipeline considers eligible. The `all` aggregate
-is the headline; the app list beneath it is the breakdown, and the two are never summed (doing so
-double-counts every item).
+- **Each percentage is per pipeline**, over the items that pipeline considers eligible. They are not
+  a single "Apple Intelligence is 84% ready" number, and the app does not invent one.
+- **The aggregate is the headline; the app list underneath is the breakdown.** They are never added
+  together — that would count every item twice.
+- **A low percentage is not automatically your bottleneck.** The list ranks by *items remaining*, so
+  a big mailbox at 26% is more of the outstanding work than a small help index at 2%.
+- **Frozen figures usually mean power, not failure.** The job macOS uses to write these reports wants
+  external power. On battery, expect the numbers to stand still.
+- **For third-party cloud storage, a high percentage promises less than it looks like.** Files that
+  are not downloaded get indexed by name and date only, not by content — see
+  `docs/notes/20260812-fileprovider-materialization.md` for the measurements behind that.
 
-An app sitting at a low percentage is not necessarily the bottleneck — the list ranks by items
-remaining, so a large mailbox at 26% outranks a small help index at 2%.
+Requires **macOS 26.6 or later** — that is where these reports first appear. On anything older the
+app runs but has nothing to read.
 
-## Project layout
+## Building from source
+
+```sh
+swift test                              # 17 tests, ~10 s — the parsing and aggregation core
+Scripts/make-app-bundle.sh release      # full bundle, widget included
+```
+
+The bundle is built by Xcode rather than SwiftPM: WidgetKit only finds a widget shipped as an
+`.appex` inside the host app, which SwiftPM cannot produce (ADR-0005). `project.yml` is the source of
+truth and [XcodeGen](https://github.com/yonaskolb/XcodeGen) regenerates the `.xcodeproj` from it; the
+`.xcodeproj` is committed, so a clone builds with Xcode alone.
+
+**Signing under your own Apple Developer team** means replacing the team ID and App Group in four
+places, which must agree: `project.yml` (`DEVELOPMENT_TEAM` and both entitlement blocks),
+`Sources/SiriAIIndexStatus/SiriAIIndexStatus.entitlements`,
+`Sources/SiriAIIndexStatusWidget/SiriAIIndexStatusWidget.entitlements`, and
+`SnapshotStore.appGroupID`. macOS App Group IDs must start with your team ID.
 
 ```
 Sources/SiriIndexCore/            parsing, aggregation, formatting, daemon probe
 Sources/SiriAIIndexStatus/        menu bar app (SwiftUI MenuBarExtra)
 Sources/SiriAIIndexStatusWidget/  desktop widget (WidgetKit extension, built by Xcode)
 project.yml                       XcodeGen spec — source of truth for the .xcodeproj
-docs/adr/                         decisions
+docs/adr/                         decisions, and why
 docs/notes/                       what we measured about Apple's private surfaces
 ```
 
 The widget never reads the reports itself: extensions are sandboxed and get no Full Disk Access, so
 the app publishes a snapshot into a shared App Group container and the widget reads that (ADR-0005).
-It follows that the widget is blank until the app has run once, and says "App not running" rather
-than showing a stale figure as if it were live.
+Hence the widget stays blank until the app has run once, and says "App not running" rather than
+showing a stale figure as if it were live.
+
+No third-party dependencies. The formats this app reads are private to Apple and undocumented; every
+value we derived from one has a test with the real observed numbers in it, which is how we will find
+out when Apple changes something.
 
 MIT licensed — see [LICENSE](LICENSE).
-
-Requires **macOS 26.6 or later**. That is the floor because it is where the completeness reports
-first appear — on anything older the app builds and runs but has nothing to read. No third-party
-dependencies.

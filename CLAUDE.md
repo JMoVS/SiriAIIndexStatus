@@ -8,7 +8,8 @@ reports CoreSpotlight already writes to disk.
 
 **Mode: DEV, low risk.** Read-only observer: no writes outside its own container, nothing on a data
 path, no network. A bug costs a wrong percentage on screen. Optimize for iteration speed. Rigor is
-deliberately lighter than `tmsmbcache` — no probe ledger, no mandatory worktrees, no dual review.
+deliberately lighter than a production data-path project — no probe ledger, no mandatory worktrees,
+no dual review.
 
 ## Response style
 

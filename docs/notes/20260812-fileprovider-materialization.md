@@ -126,7 +126,7 @@ which matches what the machine shows, but it is a blog post, not a contract.
 that are *definitely indexed* — and stat it:
 
 ```
-$ NC=~/Library/CloudStorage/Nextcloud-justin@trantor․justinscholz․de
+$ NC=~/Library/CloudStorage/Nextcloud-<account>@<host>   # the provider's domain root
 $ mdfind -onlyin "$NC" 'kMDItemContentTypeTree == "public.item"' > nc-mdfind.txt   # 36,291 items
 $ awk 'NR%80==0' nc-mdfind.txt > sample.txt                                        # 453 paths
 $ while IFS= read -r p; do stat -f '%Sf|%b|%z|%HT|%N' "$p"; done < sample.txt > s2.txt
@@ -172,7 +172,7 @@ importer.
 as a materialiser:
 
 ```
-$ F="$NC/Archive/…/phelas - Customer Sales Deck var04.pdf"
+$ F="$NC/Archive/…/some-8.4MB-deck.pdf"
 $ stat -f '%Sf blocks=%b size=%z' "$F"
 compressed,dataless blocks=0 size=8423559
 $ mdls "$F" | wc -l
