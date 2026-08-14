@@ -123,6 +123,79 @@ final class IndexStatusBuilderTests: XCTestCase {
         XCTAssertEqual(DisplayNames.app(for: "com.example.SomeNewApp"), "Some New App")
     }
 
+    /// The developer-facing lookup: one bundle ID, every pipeline, absence included. Numbers are the
+    /// real 2026-08-12 reading — Mail at 26.1% of 118,195 in Embedding, complete in Keyphrase.
+    func testAppStandingCarriesEveryPipelineIncludingTheOnesWithNoRow() {
+        let status = IndexStatusBuilder.build(
+            from: [
+                row("Embedding", "all", 0.487, 202_447),
+                row("Embedding", "com.apple.mail", 0.261, 118_195),
+                row("Keyphrase", "all", 0.98, 120_000),
+                row("Keyphrase", "com.apple.mail", 1.0, 118_195),
+                row("LSSR5EventsandordersUrgent", "all", 0.30, 90_000),
+                row("LSSR5EventsandordersUrgent", "com.apple.Notes", 0.30, 90_000),
+            ],
+            updaterRunning: true
+        )
+
+        let mail = status.standing(forBundleID: "com.apple.mail")
+        XCTAssertEqual(mail?.standings.count, 2)
+        XCTAssertEqual(
+            mail?.absentFromPipelines, ["LSSR5EventsandordersUrgent"],
+            "a pipeline with no row for the app is the answer, not a gap"
+        )
+        // Most work remaining first: Embedding (~87,342 left) before Keyphrase (0 left).
+        XCTAssertEqual(mail?.standings.first?.pipeline, "Embedding")
+        XCTAssertEqual(mail?.standings.first?.remainingItems, 87_346)
+        XCTAssertEqual(mail?.standings.first?.indexedItems, 30_849)
+        XCTAssertFalse(mail?.isCompleteEverywhere ?? true)
+        XCTAssertEqual(mail?.largestEligibleItems, 118_195, "never the sum across pipelines")
+
+        XCTAssertNil(status.standing(forBundleID: "com.example.NotDonating"))
+        XCTAssertFalse(status.donatingBundleIDs.contains("all"), "`all` is an aggregate, not an app")
+    }
+
+    func testAppSearchMatchesRawBundleIDAndDisplayNameAndRanksByItems() {
+        let status = IndexStatusBuilder.build(
+            from: [
+                row("Embedding", "all", 0.5, 200_000),
+                row("Embedding", "com.apple.mail", 0.261, 118_195),
+                row("Embedding", "com.apple.helpviewer", 0.022, 8_642),
+                row("Embedding", "com.example.MyGreatApp", 0.5, 12),
+            ],
+            updaterRunning: true
+        )
+
+        XCTAssertEqual(status.appStandings(matching: "com.example").map(\.bundleID), ["com.example.MyGreatApp"])
+        XCTAssertEqual(status.appStandings(matching: "Great App").map(\.bundleID), ["com.example.MyGreatApp"],
+                       "the prettified name has to match too — it is what the panel shows")
+        XCTAssertEqual(status.appStandings(matching: "  MAIL ").map(\.bundleID), ["com.apple.mail"],
+                       "case and stray whitespace must not decide whether a developer finds their app")
+        XCTAssertEqual(
+            status.appStandings().map(\.bundleID),
+            ["com.apple.mail", "com.apple.helpviewer", "com.example.MyGreatApp"],
+            "biggest eligible-item count first"
+        )
+        XCTAssertTrue(status.appStandings(matching: "nothing-like-this").isEmpty)
+    }
+
+    /// `laggards` hides completed apps, which is right for "what is holding this up" and wrong for
+    /// "is my app in there" — the panel's show-all list must keep them.
+    func testAppsByRemainingItemsKeepsCompletedAppsThatLaggardsDrops() {
+        let status = IndexStatusBuilder.build(
+            from: [
+                row("Embedding", "all", 0.9, 1_000),
+                row("Embedding", "com.apple.mail", 0.5, 800),
+                row("Embedding", "com.apple.Notes", 1.0, 200),
+            ],
+            updaterRunning: false
+        )
+
+        let embedding = status.headline
+        XCTAssertEqual(embedding?.laggards.map(\.bundleID), ["com.apple.mail"])
+        XCTAssertEqual(embedding?.appsByRemainingItems.map(\.bundleID), ["com.apple.mail", "com.apple.Notes"])
+    }
+
     func testPercentFormatting() {
         XCTAssertEqual(Formatting.percent(0.4872972), "48.7%")
         XCTAssertEqual(Formatting.compactPercent(0.4872972), "49%")

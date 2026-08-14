@@ -20,6 +20,10 @@ nobody. This app reads them and puts the percentage in your menu bar.
 - **In the panel:** every indexing pipeline (embeddings, keyphrases, events & orders, ID documents),
   with a per-app breakdown — Mail, Calendar, Notes, Messages, iCloud Drive, third-party cloud
   storage — ranked by how much work is left.
+- **What the index has of one particular app:** search any bundle ID (or app name) and the panel
+  answers per pipeline — how much of what that app donated has been embedded, how much is left, and
+  which pipelines hold nothing of it at all. Useful if you ship an app that donates to CoreSpotlight
+  and want to see what Spotlight actually made of it.
 - **Whether it is working right now:** the app shows whether the indexer process is running.
 - **How fresh the figures are:** macOS refreshes these numbers roughly once a day, so they are
   checkpoints, not a live feed. The panel always tells you how old they are — a figure that has not

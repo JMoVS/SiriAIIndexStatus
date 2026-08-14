@@ -53,12 +53,21 @@ public struct PipelineProgress: Sendable, Hashable, Identifiable, Codable {
 
     /// Apps furthest from done, biggest backlog first — what is actually holding the pipeline up.
     public var laggards: [AppProgress] {
-        apps.filter { $0.completeness < 0.999 }
-            .sorted { lhs, rhs in
-                let lhsRemaining = Double(lhs.eligibleItems) * (1 - lhs.completeness)
-                let rhsRemaining = Double(rhs.eligibleItems) * (1 - rhs.completeness)
-                return lhsRemaining > rhsRemaining
-            }
+        appsByRemainingItems.filter { $0.completeness < 0.999 }
+    }
+
+    /// Every donating app, biggest backlog first, finished ones included.
+    ///
+    /// `laggards` answers "what is holding this up" and so drops anything at 100%. A developer
+    /// asking what the index has of *their* app needs the other answer: a row at 100% is the
+    /// success case, and a view that can only show incomplete rows cannot report it.
+    public var appsByRemainingItems: [AppProgress] {
+        apps.sorted { lhs, rhs in
+            let lhsRemaining = Double(lhs.eligibleItems) * (1 - lhs.completeness)
+            let rhsRemaining = Double(rhs.eligibleItems) * (1 - rhs.completeness)
+            if lhsRemaining != rhsRemaining { return lhsRemaining > rhsRemaining }
+            return lhs.eligibleItems > rhs.eligibleItems
+        }
     }
 }
 
