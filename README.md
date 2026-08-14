@@ -1,5 +1,9 @@
 # SiriAIIndexStatus
 
+[![CI](https://github.com/JMoVS/SiriAIIndexStatus/actions/workflows/ci.yml/badge.svg)](https://github.com/JMoVS/SiriAIIndexStatus/actions/workflows/ci.yml)
+[![macOS 26.6+](https://img.shields.io/badge/macOS-26.6%2B-black?logo=apple)](#install)
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
+
 **Is Apple Intelligence finished indexing my Mac yet?** On iPhone, Settings tells you — indexing
 progress is right there in the UI. On macOS, Apple built no such screen. This is that missing UI: a
 menu bar app that answers the question in one glance.
