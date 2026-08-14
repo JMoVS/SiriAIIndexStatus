@@ -1,12 +1,13 @@
 # SiriAIIndexStatus
 
-**Is Apple Intelligence finished indexing my Mac yet?** macOS 26 answers that question nowhere. This
-menu bar app answers it in one glance.
+**Is Apple Intelligence finished indexing my Mac yet?** On iPhone, Settings tells you — indexing
+progress is right there in the UI. On macOS, Apple built no such screen. This is that missing UI: a
+menu bar app that answers the question in one glance.
 
 Semantic search — Spotlight and Siri finding things by *meaning* rather than by filename — only works
-once macOS has built a vector index of your mail, files, calendar, and messages. That happens quietly
-in the background over days, and there is no progress bar, no settings pane, nothing. Yet macOS
-writes the numbers to disk. This app reads them and puts the percentage in your menu bar.
+once the system has built a vector index of your mail, files, calendar, and messages. That happens
+quietly in the background over days. macOS writes the progress numbers to disk and then shows them to
+nobody. This app reads them and puts the percentage in your menu bar.
 
 ## What you see
 
