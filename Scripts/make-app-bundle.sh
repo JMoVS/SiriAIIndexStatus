@@ -56,5 +56,14 @@ LSREGISTER="/System/Library/Frameworks/CoreServices.framework/Versions/Current/F
 "$LSREGISTER" -u "$BUILT" >/dev/null 2>&1 || true
 "$LSREGISTER" -f -R -trusted "$APP" >/dev/null 2>&1 || true
 
+# The bundle has shipped stale before (a name collision sent xcodebuild off to build a different
+# product entirely), and a stale bundle is invisible: it launches, it works, it shows the previous
+# build's UI. Cheap guard — the binary must be newer than every source file that goes into it.
+NEWEST_SOURCE="$(find Sources Package.swift project.yml -type f -newer "$APP/Contents/MacOS/$APP_NAME" 2>/dev/null | head -1)"
+if [ -n "$NEWEST_SOURCE" ]; then
+	echo "error: $APP is older than $NEWEST_SOURCE — xcodebuild did not rebuild it" >&2
+	exit 1
+fi
+
 echo "Built $APP"
 echo "  widget: $(basename "$(ls -d "$APP/Contents/PlugIns/"*.appex 2>/dev/null || echo '(none embedded!)')")"

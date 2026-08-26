@@ -13,7 +13,11 @@ let package = Package(
     products: [
         // Shared by the menu bar app and the widget (ADR-0001).
         .library(name: "SiriIndexCore", targets: ["SiriIndexCore"]),
-        .executable(name: "SiriAIIndexStatus", targets: ["SiriAIIndexStatus"]),
+        // Named apart from the Xcode app target on purpose. Both build the same sources, and while
+        // they shared the name `SiriAIIndexStatus`, `xcodebuild -scheme SiriAIIndexStatus` resolved
+        // to this plain executable and left `SiriAIIndexStatus.app` stale — a bundle that silently
+        // kept shipping the previous build.
+        .executable(name: "SiriAIIndexStatusMenuBar", targets: ["SiriAIIndexStatusMenuBar"]),
     ],
     targets: [
         .target(
@@ -22,7 +26,7 @@ let package = Package(
             swiftSettings: [.swiftLanguageMode(.v6)]
         ),
         .executableTarget(
-            name: "SiriAIIndexStatus",
+            name: "SiriAIIndexStatusMenuBar",
             dependencies: ["SiriIndexCore"],
             path: "Sources/SiriAIIndexStatus",
             // Generated from project.yml and consumed by Xcode, not SwiftPM (ADR-0005).
