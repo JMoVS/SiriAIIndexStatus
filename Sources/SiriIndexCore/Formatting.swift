@@ -21,12 +21,23 @@ public enum Formatting {
     /// `3 h ago`, `2 d ago` — report freshness, which the UI must show because the numbers are
     /// checkpoints rather than a live feed (ADR-0002).
     public static func age(_ interval: TimeInterval) -> String {
+        "\(duration(interval)) ago"
+    }
+
+    /// `23 h`, `1 d 2 h` — how long a stretch of progress covers.
+    public static func duration(_ interval: TimeInterval) -> String {
+        let interval = abs(interval)
         let formatter = DateComponentsFormatter()
         formatter.unitsStyle = .abbreviated
         formatter.allowedUnits = interval < 3600 ? [.minute] : (interval < 86400 ? [.hour] : [.day, .hour])
         formatter.maximumUnitCount = 2
-        let text = formatter.string(from: max(interval, 60)) ?? "?"
-        return "\(text) ago"
+        return formatter.string(from: max(interval, 60)) ?? "?"
+    }
+
+    /// `+3,204` / `−12` — a change in items. Always signed, because an unsigned delta beside an
+    /// absolute count is unreadable: `3,204` could be either.
+    public static func signedItemCount(_ count: Int) -> String {
+        count < 0 ? "\u{2212}\(itemCount(-count))" : "+\(itemCount(count))"
     }
 }
 

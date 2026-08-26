@@ -23,11 +23,22 @@ public enum SnapshotStore {
         /// `status.reportDate` is the latter, and the two can be a day apart (ADR-0002).
         public let capturedAt: Date
         public let failure: String?
+        /// Progress since each pipeline's previous report, carried here because the widget cannot
+        /// work it out: the history lives in the app's own log (ADR-0006), and a snapshot of the
+        /// current reading alone has nothing to compare against. Optional, and absent in snapshots
+        /// written before this existed.
+        public let delta: IndexDelta?
 
-        public init(status: IndexStatus, capturedAt: Date = Date(), failure: String? = nil) {
+        public init(
+            status: IndexStatus,
+            capturedAt: Date = Date(),
+            failure: String? = nil,
+            delta: IndexDelta? = nil
+        ) {
             self.status = status
             self.capturedAt = capturedAt
             self.failure = failure
+            self.delta = delta
         }
 
         /// How long ago the app last managed to read anything. Large values mean the app is not

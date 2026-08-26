@@ -23,6 +23,13 @@ struct IndexStatusEntry: TimelineEntry {
 
     var status: IndexStatus { snapshot?.status ?? .empty }
 
+    /// What the headline pipeline got through since its previous report, or nil until the app has
+    /// seen two of them (ADR-0006).
+    var headlineDelta: PipelineDelta? {
+        guard let headline = status.headline else { return nil }
+        return snapshot?.delta?[headline.pipeline]
+    }
+
     /// A snapshot much older than the app's 10-minute poll means the app is not running — a
     /// different problem from indexing having stalled, and worth distinguishing on screen.
     var appLooksStopped: Bool { (snapshot?.staleness(now: date) ?? 0) > 3600 }
@@ -110,6 +117,15 @@ struct IndexStatusWidgetView: View {
                     .foregroundStyle(.secondary)
                     .lineLimit(1)
                     .minimumScaleFactor(0.8)
+                // One line, item count only: the widget has room for what moved, not for the two
+                // percentages and the eligible-set change the panel also shows.
+                if let moved = entry.headlineDelta, moved.indexedItemsChange != 0 {
+                    Text("\(Formatting.signedItemCount(moved.indexedItemsChange)) in \(Formatting.duration(moved.span))")
+                        .font(.caption2.monospacedDigit())
+                        .foregroundStyle(moved.indexedItemsChange < 0 ? Color.secondary : Color.green)
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.8)
+                }
             } else if let failure = entry.failure {
                 Text(failure)
                     .font(.caption2)

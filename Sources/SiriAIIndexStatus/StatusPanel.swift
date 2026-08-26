@@ -30,6 +30,7 @@ struct StatusPanel: View {
                             ForEach(store.status.pipelines) { pipeline in
                                 PipelineRow(
                                     pipeline: pipeline,
+                                    delta: store.delta?[pipeline.id],
                                     isExpanded: expanded.contains(pipeline.id),
                                     isShowingAll: showingAll.contains(pipeline.id),
                                     toggle: { toggle(&expanded, pipeline.id) },
@@ -84,7 +85,7 @@ struct StatusPanel: View {
                 noMatchState
             } else {
                 ForEach(matches.prefix(Self.maxResults)) { standing in
-                    AppStandingCard(standing: standing)
+                    AppStandingCard(standing: standing, delta: store.delta)
                 }
                 if matches.count > Self.maxResults {
                     Text("\(matches.count - Self.maxResults) more match — narrow the search.")
@@ -275,6 +276,9 @@ struct StatusPanel: View {
 /// care how far along they are.
 private struct AppStandingCard: View {
     let standing: AppStanding
+    /// Nil until the app has seen two reports — "did my donations move today" is the developer's
+    /// second question, and it cannot be answered from a single checkpoint.
+    let delta: IndexDelta?
 
     var body: some View {
         VStack(alignment: .leading, spacing: 5) {
@@ -304,6 +308,17 @@ private struct AppStandingCard: View {
                         Text("\(Formatting.percent(row.completeness)) · \(Formatting.itemCount(row.indexedItems)) of \(Formatting.itemCount(row.eligibleItems))")
                             .font(.caption.monospacedDigit())
                             .foregroundStyle(row.isComplete ? .secondary : .primary)
+                        if let moved = delta?[row.pipeline]?.app(standing.bundleID),
+                           moved.isNew || moved.indexedItemsChange != 0 {
+                            Text(moved.isNew
+                                 ? "new"
+                                 : Formatting.signedItemCount(moved.indexedItemsChange))
+                                .font(.caption2.monospacedDigit())
+                                .foregroundStyle(moved.indexedItemsChange < 0 ? Color.secondary : Color.green)
+                                .help(moved.isNew
+                                      ? "This app carried no row in the previous report."
+                                      : "Change since the previous report.")
+                        }
                     }
                 }
 
@@ -327,6 +342,7 @@ private struct AppStandingCard: View {
 
 private struct PipelineRow: View {
     let pipeline: PipelineProgress
+    let delta: PipelineDelta?
     let isExpanded: Bool
     let isShowingAll: Bool
     let toggle: () -> Void
@@ -336,6 +352,50 @@ private struct PipelineRow: View {
     /// including the apps at 100%, which `laggards` drops and a developer needs to see.
     private var visibleApps: [AppProgress] {
         isShowingAll ? pipeline.appsByRemainingItems : Array(pipeline.laggards.prefix(8))
+    }
+
+    /// The question a percentage on its own cannot answer: did anything happen since yesterday.
+    ///
+    /// Item count leads, percentage points follow. The eligible set grows as apps donate, so the
+    /// percentage can fall on a day the indexer got through thousands of items — reporting only
+    /// the percentage would call that day a regression.
+    @ViewBuilder
+    private var progressSinceLastReport: some View {
+        if let delta {
+            if delta.hasMovement {
+                VStack(alignment: .leading, spacing: 2) {
+                    HStack(spacing: 4) {
+                        Text(Formatting.signedItemCount(delta.indexedItemsChange))
+                            .foregroundStyle(delta.indexedItemsChange < 0 ? Color.secondary : Color.green)
+                        Text("indexed in \(Formatting.duration(delta.span)) · \(Formatting.percent(delta.previousCompleteness)) → \(Formatting.percent(delta.currentCompleteness))")
+                            .foregroundStyle(.secondary)
+                    }
+                    // Spelled out rather than "+2,073 eligible", which reads as the size of the
+                    // backlog instead of the growth of it. "The total" is the item count on the
+                    // line above — the same number the percentage is measured against.
+                    if delta.eligibleItemsChange > 0 {
+                        Text("\(Formatting.itemCount(delta.eligibleItemsChange)) more items added to the total")
+                            .foregroundStyle(.secondary)
+                    } else if delta.eligibleItemsChange < 0 {
+                        Text("\(Formatting.itemCount(-delta.eligibleItemsChange)) items removed from the total")
+                            .foregroundStyle(.secondary)
+                    }
+                }
+                .font(.caption.monospacedDigit())
+                .help("Measured between the last two reports macOS wrote, "
+                      + "\(Formatting.duration(delta.span)) apart.")
+            } else {
+                Text("No change in the \(Formatting.duration(delta.span)) to this report")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+        } else {
+            Text("First reading — progress appears after the next report")
+                .font(.caption)
+                .foregroundStyle(.tertiary)
+                .help("macOS overwrites these reports in place, so the app can only compare "
+                      + "checkpoints it was running to see.")
+        }
     }
 
     var body: some View {
@@ -362,6 +422,8 @@ private struct PipelineRow: View {
                 .font(.caption)
                 .foregroundStyle(.secondary)
 
+            progressSinceLastReport
+
             if isExpanded {
                 VStack(alignment: .leading, spacing: 3) {
                     ForEach(visibleApps) { app in
@@ -372,6 +434,12 @@ private struct PipelineRow: View {
                             Text("\(Formatting.percent(app.completeness)) of \(Formatting.itemCount(app.eligibleItems))")
                                 .font(.caption.monospacedDigit())
                                 .foregroundStyle(.secondary)
+                            if let moved = delta?.app(app.bundleID), moved.isNew || moved.indexedItemsChange != 0 {
+                                Text(moved.isNew ? "new" : Formatting.signedItemCount(moved.indexedItemsChange))
+                                    .font(.caption2.monospacedDigit())
+                                    .foregroundStyle(moved.indexedItemsChange < 0 ? Color.secondary : Color.green)
+                                    .frame(minWidth: 42, alignment: .trailing)
+                            }
                         }
                         .help(app.bundleID)
                     }

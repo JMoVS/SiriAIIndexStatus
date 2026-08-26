@@ -9,7 +9,8 @@ Work the first unblocked item, top down. **Delete an item when it ships** — no
 
 ### WL-6 — Widget states other than "everything works" are unverified
 - Medium renders real numbers. Still never seen on screen: the small family, the "App not running"
-  footer (needs the app quit for an hour), and the failure text after a snapshot write error.
+  footer (needs the app quit for an hour), the failure text after a snapshot write error, and the
+  new progress line (`+7,244 in 1d`), which needs two checkpoints before it draws at all.
 - Cheap once the layout settles; the medium layout was already clipping its title and age line
   before anyone looked at it, which is the argument for looking at the rest.
 
@@ -69,9 +70,10 @@ Work the first unblocked item, top down. **Delete an item when it ships** — no
 
 - **Per-app drill-down beyond 8 rows.** The panel caps laggards at 8. Fine until a pipeline has more
   interesting apps than that.
-- **Historical trend.** Sampling the reports over time would show whether indexing is actually
-  progressing or wedged — the question the operator asked first. Needs its own store and a chart;
-  worth it only if indexing turns out to stall.
+- **Historical trend as a chart.** The one-step delta ships (ADR-0006): each pipeline shows what it
+  got through since its own previous report. The log behind it holds 60 checkpoints, so a sparkline
+  over weeks is now only a view away — worth it if the single-step figure turns out to be too noisy
+  to read a trend from.
 - **`mdutil` / daemon-health surface.** Currently only "updater running / idle". Deeper health
   (last journal job, items processed) is only in `log stream`, mostly `<private>`.
 - **Localization.** German UI, given the operator's locale. Strings are currently inline English.

@@ -14,6 +14,14 @@ public struct AppProgress: Sendable, Hashable, Identifiable, Codable {
         self.eligibleItems = eligibleItems
     }
 
+    /// Items this pipeline has got through for this app.
+    ///
+    /// Rounded, not truncated: the reports carry a fraction, so 0.999 of 1,204 leaves "1 to go"
+    /// and truncation would call that finished (same rule as `AppPipelineStanding`).
+    public var indexedItems: Int {
+        max(0, eligibleItems - max(0, Int((Double(eligibleItems) * (1 - completeness)).rounded())))
+    }
+
     /// Last path component of the bundle id, title-cased enough to read in a menu.
     public var displayName: String { DisplayNames.app(for: bundleID) }
 }
@@ -49,6 +57,11 @@ public struct PipelineProgress: Sendable, Hashable, Identifiable, Codable {
         self.reportDate = reportDate
         self.apps = apps
         self.headlineIsDerived = headlineIsDerived
+    }
+
+    /// Items this pipeline has got through, across every donating app.
+    public var indexedItems: Int {
+        max(0, eligibleItems - max(0, Int((Double(eligibleItems) * (1 - completeness)).rounded())))
     }
 
     /// Apps furthest from done, biggest backlog first — what is actually holding the pipeline up.

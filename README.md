@@ -31,6 +31,10 @@ nobody. This app reads them and puts the percentage in your menu bar.
   answers per pipeline — how much of what that app donated has been embedded, how much is left, and
   which pipelines hold nothing of it at all. Useful if you ship an app that donates to CoreSpotlight
   and want to see what Spotlight actually made of it.
+- **What got indexed since the last report:** each pipeline shows the movement between its last two
+  reports — `+10,339 indexed in 24 h · 48.7% → 52.6%` — with the per-app breakdown carrying its own
+  figures. macOS overwrites these reports in place, so this only covers checkpoints the app was
+  running to see: the first launch has nothing to compare against and says so (ADR-0006).
 - **Whether it is working right now:** the app shows whether the indexer process is running.
 - **How fresh the figures are:** macOS refreshes these numbers roughly once a day, so they are
   checkpoints, not a live feed. The panel always tells you how old they are — a figure that has not

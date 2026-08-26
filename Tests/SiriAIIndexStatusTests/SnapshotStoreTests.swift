@@ -98,4 +98,32 @@ final class SnapshotStoreTests: XCTestCase {
 
         XCTAssertEqual(try SnapshotStore.read(from: url), second)
     }
+
+    /// The widget cannot compute progress itself — the history lives in the app's log (ADR-0006) —
+    /// so the delta has to survive the hand-off, and an older snapshot without one must still
+    /// decode rather than blanking the widget.
+    func testDeltaRidesAlongAndOlderSnapshotsStillDecode() throws {
+        let url = URL(fileURLWithPath: NSTemporaryDirectory())
+            .appendingPathComponent("snapshot-\(UUID().uuidString).json")
+        defer { try? FileManager.default.removeItem(at: url) }
+
+        let delta = IndexDelta(pipelines: [
+            PipelineDelta(
+                pipeline: "Embedding",
+                previousDate: Date(timeIntervalSinceReferenceDate: 808_142_663),
+                currentDate: Date(timeIntervalSinceReferenceDate: 809_337_883),
+                previousCompleteness: 0.487,
+                currentCompleteness: 0.5256729497833241,
+                indexedItemsChange: 10_339,
+                eligibleItemsChange: 4_775,
+                apps: []
+            )
+        ])
+        try SnapshotStore.write(.init(status: .empty, failure: nil, delta: delta), to: url)
+        XCTAssertEqual(try SnapshotStore.read(from: url).delta?["Embedding"]?.indexedItemsChange, 10_339)
+
+        let legacy = Data(#"{"status":{"pipelines":[],"updaterRunning":false},"capturedAt":"2026-08-26T07:25:25Z"}"#.utf8)
+        try legacy.write(to: url)
+        XCTAssertNil(try SnapshotStore.read(from: url).delta)
+    }
 }
