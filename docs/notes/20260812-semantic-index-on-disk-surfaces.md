@@ -49,10 +49,10 @@ Access; a fresh app bundle gets `NSFileReadNoPermissionError` (ADR-0004).
 | `pipeline` | `NSString` | e.g. `Embedding` |
 | `bundleID` | `NSString` | donating app, or `all` for the aggregate (ADR-0003) |
 | `pipelineCompleteness` | `NSNumber` | 0…1 |
-| `pipelineCompletenessHeuristicScore` | `NSNumber` | equal to `pipelineCompleteness` in every observed row |
+| `pipelineCompletenessHeuristicScore` | `NSNumber` | Apple's own score, **not** `pipelineCompleteness` — they diverge widely (2026-09-11 note) |
 | `eligibleItems` | `NSNumber` | in-scope item count |
 | `reportDate` | `NSDate` | identical across all rows of a file |
-| `pipelineCompleteness{FirstTime,Second,Third}Bucket` | `$null` | unpopulated in every observed row |
+| `pipelineCompleteness{FirstTime,Second,Third}Bucket` | `NSNumber?` | populated on the large slow rows, `$null` elsewhere (2026-09-11 note) |
 
 Every scalar is an object reference to an `NSNumber`, not an inline primitive — `decodeInteger(forKey:)`
 returns 0 for all of them.

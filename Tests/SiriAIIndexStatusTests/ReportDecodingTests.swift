@@ -39,6 +39,43 @@ final class ReportDecodingTests: XCTestCase {
         XCTAssertFalse(rows[1].isAggregate)
     }
 
+    /// Real values from the 2026-09-10 reports. Both claims this pins down were wrong in the
+    /// earlier note: the heuristic score is not `completeness`, and the buckets are not always
+    /// `$null`. See `docs/notes/20260911-what-the-headline-percentage-measures.md`.
+    func testDecodesHeuristicScoreAndBucketsIndependentlyOfCompleteness() throws {
+        let data = try makeArchive([
+            PipelineCompletenessReport(
+                pipeline: "LSSR5EventsandordersBackground", bundleID: "com.apple.MobileSMS",
+                completeness: 0.022_241_550_695_825_05,
+                heuristicScore: 0.254_687_565_838_184,
+                eligibleItems: 8_048, reportDate: nil,
+                firstTimeBucket: 0.2,
+                secondBucket: 0.609_467_455_621_301_8,
+                thirdBucket: 0.009_282_807_731_434_384
+            ),
+            PipelineCompletenessReport(
+                pipeline: "Embedding", bundleID: "com.nextcloud.desktopclient",
+                completeness: 0.603_624_792_473_713_4,
+                heuristicScore: 0.603_624_792_473_713_4,
+                eligibleItems: 36_140, reportDate: nil
+            ),
+        ])
+
+        let rows = try ReportLoader.decode(archive: data, source: URL(fileURLWithPath: "/dev/null"))
+
+        XCTAssertEqual(rows[0].completeness, 0.0222, accuracy: 0.0001)
+        XCTAssertEqual(rows[0].heuristicScore, 0.2547, accuracy: 0.0001,
+                       "heuristic score is a separate number, not a copy of completeness")
+        XCTAssertEqual(rows[0].firstTimeBucket ?? -1, 0.2, accuracy: 0.0001)
+        XCTAssertEqual(rows[0].secondBucket ?? -1, 0.6095, accuracy: 0.0001)
+        XCTAssertEqual(rows[0].thirdBucket ?? -1, 0.0093, accuracy: 0.0001)
+
+        // Most rows carry no buckets at all; absent must decode as nil, not as 0.0 complete.
+        XCTAssertNil(rows[1].firstTimeBucket)
+        XCTAssertNil(rows[1].secondBucket)
+        XCTAssertNil(rows[1].thirdBucket)
+    }
+
     func testRejectsNonReportArchive() throws {
         let data = try NSKeyedArchiver.archivedData(
             withRootObject: ["not" as NSString: "a report" as NSString] as NSDictionary,

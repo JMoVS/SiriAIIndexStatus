@@ -16,10 +16,24 @@ public final class PipelineCompletenessReport: NSObject, NSSecureCoding {
     public let bundleID: String
     /// Fraction complete, 0...1.
     public let completeness: Double
-    /// Apple's heuristic score. Equal to `completeness` in every sample observed so far.
+    /// Apple's own health score for this row, which is *not* `completeness`.
+    ///
+    /// Measured 2026-09-11: `Embedding`/`all` reads 0.4728 complete but scores 0.6003, and
+    /// `LSSR5IdentificationdocumentsBackground`/`all` reads 0.0231 against a score of 0.5115. The
+    /// `all` row's score is neither the weighted nor the unweighted mean of the app rows', so it
+    /// cannot be recomputed from the file. See
+    /// `docs/notes/20260911-what-the-headline-percentage-measures.md`.
     public let heuristicScore: Double
     /// Items this pipeline considers in scope for this bundle id.
     public let eligibleItems: Int
+    /// Apple's three completeness cohorts, present only on the large slow rows and nil elsewhere.
+    ///
+    /// Third tracks `completeness` closely but never exactly; the heuristic score appears to weight
+    /// the three. What divides them is unknown — decoded so the theory can be watched rather than
+    /// argued about. See `docs/notes/20260911-what-the-headline-percentage-measures.md`.
+    public let firstTimeBucket: Double?
+    public let secondBucket: Double?
+    public let thirdBucket: Double?
     /// When the daemon last wrote this row. Reports refresh roughly daily, not live.
     public let reportDate: Date?
 
@@ -29,7 +43,10 @@ public final class PipelineCompletenessReport: NSObject, NSSecureCoding {
         completeness: Double,
         heuristicScore: Double,
         eligibleItems: Int,
-        reportDate: Date?
+        reportDate: Date?,
+        firstTimeBucket: Double? = nil,
+        secondBucket: Double? = nil,
+        thirdBucket: Double? = nil
     ) {
         self.pipeline = pipeline
         self.bundleID = bundleID
@@ -37,6 +54,9 @@ public final class PipelineCompletenessReport: NSObject, NSSecureCoding {
         self.heuristicScore = heuristicScore
         self.eligibleItems = eligibleItems
         self.reportDate = reportDate
+        self.firstTimeBucket = firstTimeBucket
+        self.secondBucket = secondBucket
+        self.thirdBucket = thirdBucket
     }
 
     public init?(coder: NSCoder) {
@@ -54,6 +74,15 @@ public final class PipelineCompletenessReport: NSObject, NSSecureCoding {
         )?.doubleValue ?? 0
         self.eligibleItems = coder.decodeObject(of: NSNumber.self, forKey: "eligibleItems")?.intValue ?? 0
         self.reportDate = coder.decodeObject(of: NSDate.self, forKey: "reportDate") as Date?
+        self.firstTimeBucket = coder.decodeObject(
+            of: NSNumber.self, forKey: "pipelineCompletenessFirstTimeBucket"
+        )?.doubleValue
+        self.secondBucket = coder.decodeObject(
+            of: NSNumber.self, forKey: "pipelineCompletenessSecondBucket"
+        )?.doubleValue
+        self.thirdBucket = coder.decodeObject(
+            of: NSNumber.self, forKey: "pipelineCompletenessThirdBucket"
+        )?.doubleValue
     }
 
     public func encode(with coder: NSCoder) {
@@ -63,6 +92,9 @@ public final class PipelineCompletenessReport: NSObject, NSSecureCoding {
         coder.encode(NSNumber(value: heuristicScore), forKey: "pipelineCompletenessHeuristicScore")
         coder.encode(NSNumber(value: eligibleItems), forKey: "eligibleItems")
         coder.encode(reportDate as NSDate?, forKey: "reportDate")
+        coder.encode(firstTimeBucket.map(NSNumber.init(value:)), forKey: "pipelineCompletenessFirstTimeBucket")
+        coder.encode(secondBucket.map(NSNumber.init(value:)), forKey: "pipelineCompletenessSecondBucket")
+        coder.encode(thirdBucket.map(NSNumber.init(value:)), forKey: "pipelineCompletenessThirdBucket")
     }
 
     /// `all` is the pipeline-wide aggregate row, not a sibling of the per-app rows (ADR-0003).
