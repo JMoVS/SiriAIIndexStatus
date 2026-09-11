@@ -4,10 +4,19 @@ import SwiftUI
 /// The panel shown when the menu bar item is clicked.
 struct StatusPanel: View {
     let store: StatusStore
-    @State private var expanded: Set<String> = []
+    @State private var expanded: Set<String>
     @State private var showingAll: Set<String> = []
     @State private var showingSchedule = false
     @State private var query = ""
+    /// Height of the pipeline list's content, so the scroll view can stop at it.
+    @State private var listContentHeight: CGFloat = 0
+
+    /// `initiallyExpanded` exists for `PanelSnapshot`: the layout that overflows is the expanded
+    /// one, and a harness that can only render the collapsed panel cannot see the bug it is for.
+    init(store: StatusStore, initiallyExpanded: Set<String> = []) {
+        self.store = store
+        _expanded = State(initialValue: initiallyExpanded)
+    }
 
     private var trimmedQuery: String {
         query.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -23,24 +32,40 @@ struct StatusPanel: View {
                 emptyState
             } else {
                 VStack(alignment: .leading, spacing: 12) {
+                    // Outside the scroll view: the search field is how you escape a long list, so
+                    // it must not be the first thing that scrolls away.
                     searchField
 
-                    if trimmedQuery.isEmpty {
-                        VStack(alignment: .leading, spacing: 14) {
-                            ForEach(store.status.pipelines) { pipeline in
-                                PipelineRow(
-                                    pipeline: pipeline,
-                                    delta: store.delta?[pipeline.id],
-                                    isExpanded: expanded.contains(pipeline.id),
-                                    isShowingAll: showingAll.contains(pipeline.id),
-                                    toggle: { toggle(&expanded, pipeline.id) },
-                                    toggleShowAll: { toggle(&showingAll, pipeline.id) }
-                                )
+                    ScrollView {
+                        Group {
+                            if trimmedQuery.isEmpty {
+                                VStack(alignment: .leading, spacing: 14) {
+                                    ForEach(store.status.pipelines) { pipeline in
+                                        PipelineRow(
+                                            pipeline: pipeline,
+                                            delta: store.delta?[pipeline.id],
+                                            isExpanded: expanded.contains(pipeline.id),
+                                            isShowingAll: showingAll.contains(pipeline.id),
+                                            toggle: { toggle(&expanded, pipeline.id) },
+                                            toggleShowAll: { toggle(&showingAll, pipeline.id) }
+                                        )
+                                    }
+                                }
+                            } else {
+                                appResults
                             }
                         }
-                    } else {
-                        appResults
+                        .onGeometryChange(for: CGFloat.self) { $0.size.height } action: {
+                            listContentHeight = $0
+                        }
                     }
+                    // A scroll view takes every point it is offered, so a plain `maxHeight` would
+                    // pad a short list out to the cap with empty space. It has to be told the
+                    // height its own content wants.
+                    .frame(height: listContentHeight > 0
+                           ? min(listContentHeight, Self.listHeightCap)
+                           : nil)
+                    .scrollBounceBehavior(.basedOnSize)
                 }
             }
 
@@ -50,6 +75,20 @@ struct StatusPanel: View {
         .padding(14)
         .frame(width: 380)
         .task { await store.refresh() }
+    }
+
+    /// How tall the pipeline list may grow before it scrolls instead.
+    ///
+    /// A `MenuBarExtra` window sizes itself to its content and does not stop at the screen edge:
+    /// expanding one pipeline's donor list ran the panel off the bottom, with the rows that were
+    /// scrolled past simply unreachable. Measured against the screen rather than fixed, because
+    /// the content that overflows is a list whose length depends on how many apps donate.
+    private static var listHeightCap: CGFloat {
+        // The chrome that must stay on screen with it: title, search field, divider, footer,
+        // padding, and the menu bar the panel hangs from.
+        let chrome: CGFloat = 200
+        let available = (NSScreen.main?.visibleFrame.height ?? 800) - chrome
+        return min(max(available, 280), 900)
     }
 
     /// The developer entry point: type a bundle ID, see what the index has of that app.
@@ -360,7 +399,7 @@ private struct PipelineRow: View {
     /// percentage can fall on a day the indexer got through thousands of items — reporting only
     /// the percentage would call that day a regression.
     @ViewBuilder
-    private var progressSinceLastReport: some View {
+    private func progressSinceLastReport(_ composition: PipelineComposition) -> some View {
         if let delta {
             if delta.hasMovement {
                 VStack(alignment: .leading, spacing: 2) {
@@ -380,6 +419,18 @@ private struct PipelineRow: View {
                         Text("\(Formatting.itemCount(-delta.eligibleItemsChange)) items removed from the total")
                             .foregroundStyle(.secondary)
                     }
+                    // Without this the percentage above is read as indexing either way. Measured
+                    // 2026-09-08: Embedding fell 51.3% → 47.3% on a day whose entire movement was
+                    // one donor re-counting what it considers eligible (WL-12, WL-13).
+                    if composition.isDominatedByScopeChange {
+                        Label(
+                            "Mostly the total being resized, not indexing",
+                            systemImage: "arrow.left.and.right"
+                        )
+                        .foregroundStyle(.secondary)
+                        .help("The eligible total moved further than the indexed count did, so most "
+                              + "of the change in percentage is a change in what is being counted.")
+                    }
                 }
                 .font(.caption.monospacedDigit())
                 .help("Measured between the last two reports macOS wrote, "
@@ -398,7 +449,89 @@ private struct PipelineRow: View {
         }
     }
 
+    /// The answer to "it says 47% and never moves".
+    ///
+    /// Each donor's figure is `share of the total × how far it still has to go`, so the column
+    /// sums exactly to the missing percentage — this is a decomposition of the headline, not a
+    /// second ranking beside it. Measured 2026-09-10: Mail alone holds 38.9 of Embedding's missing
+    /// 52.7, and 6.2 more sit in 13,069 Help Viewer documents that have not moved in 17 days.
+    /// See `docs/notes/20260911-what-the-headline-percentage-measures.md`.
+    @ViewBuilder
+    private func composition(_ composition: PipelineComposition) -> some View {
+        let principals = composition.principals(limit: 3)
+        // One donor holding everything is already obvious from the expanded list; the block earns
+        // its lines only when the headline is a blend of donors pulling different ways.
+        if pipeline.completeness < 0.999, principals.rows.count > 1 {
+            VStack(alignment: .leading, spacing: 2) {
+                Text("Where the missing \(Formatting.percent(1 - pipeline.completeness)) sits")
+                    .font(.caption2)
+                    .foregroundStyle(.tertiary)
+
+                ForEach(principals.rows) { donor in
+                    HStack(spacing: 6) {
+                        Text(donor.displayName)
+                            .lineLimit(1)
+                            .truncationMode(.tail)
+                        Spacer(minLength: 4)
+                        Text(Formatting.points(donor.withheld))
+                            .monospacedDigit()
+                            .foregroundStyle(.secondary)
+                        movement(donor.movement)
+                            .frame(minWidth: 78, alignment: .trailing)
+                    }
+                    .help("\(donor.bundleID) — \(Formatting.percent(donor.share)) of this "
+                          + "pipeline's items, \(Formatting.percent(donor.completeness)) done. "
+                          + "Finishing it would add \(Formatting.points(donor.withheld)) points "
+                          + "to the figure above.")
+                }
+
+                if principals.otherCount > 0, principals.otherWithheld >= 0.000_5 {
+                    HStack(spacing: 6) {
+                        Text("\(principals.otherCount) others")
+                            .foregroundStyle(.secondary)
+                        Spacer(minLength: 4)
+                        Text(Formatting.points(principals.otherWithheld))
+                            .monospacedDigit()
+                            .foregroundStyle(.secondary)
+                        Spacer().frame(width: 78)
+                    }
+                }
+            }
+            .font(.caption2)
+        }
+    }
+
+    /// Work and scope change are both "movement" and only one of them is indexing, so they never
+    /// get the same colour: green is reserved for items that actually went into the index.
+    @ViewBuilder
+    private func movement(_ movement: DonorMovement) -> some View {
+        switch movement {
+        case .indexed(let items):
+            Text(Formatting.signedItemCount(items))
+                .monospacedDigit()
+                .foregroundStyle(items < 0 ? Color.secondary : Color.green)
+                .help("Items indexed since the previous report.")
+        case .scopeChanged(let eligibleItems, _):
+            Text("total \(Formatting.signedItemCount(eligibleItems))")
+                .monospacedDigit()
+                .foregroundStyle(.secondary)
+                .help("This donor's eligible set changed size by more than it indexed — the "
+                      + "percentage moved without the work behind it.")
+        case .arrived:
+            Text("new")
+                .foregroundStyle(.secondary)
+                .help("No row in the previous report.")
+        case .still:
+            Text("no change")
+                .foregroundStyle(.tertiary)
+                .help("Neither indexed nor eligible count moved since the previous report.")
+        case .unknown:
+            EmptyView()
+        }
+    }
+
     var body: some View {
+        let composed = pipeline.composition(delta: delta)
         VStack(alignment: .leading, spacing: 5) {
             Button(action: toggle) {
                 HStack(alignment: .firstTextBaseline) {
@@ -422,7 +555,8 @@ private struct PipelineRow: View {
                 .font(.caption)
                 .foregroundStyle(.secondary)
 
-            progressSinceLastReport
+            progressSinceLastReport(composed)
+            composition(composed)
 
             if isExpanded {
                 VStack(alignment: .leading, spacing: 3) {

@@ -16,6 +16,7 @@
 		CC5490C1F4E57AB6CCC75F26 /* StatusPanel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 88CEAD278E8771316133B951 /* StatusPanel.swift */; };
 		E1297CF2156E86405BD5F440 /* WidgetKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 3844EC12A97FCC1308802A32 /* WidgetKit.framework */; };
 		E8D52228CDA896DAE6610F3D /* SiriIndexCore in Frameworks */ = {isa = PBXBuildFile; productRef = 4513AA332598B24F3065090B /* SiriIndexCore */; };
+		FEE032EE6633729A380881A2 /* PanelSnapshot.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5773E585CAEA025653EB09E4 /* PanelSnapshot.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -49,6 +50,7 @@
 		37444C8AC3BE67B9912F4363 /* StatusStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StatusStore.swift; sourceTree = "<group>"; };
 		3844EC12A97FCC1308802A32 /* WidgetKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = WidgetKit.framework; path = System/Library/Frameworks/WidgetKit.framework; sourceTree = SDKROOT; };
 		3B0BDD311C97DA15B69FB682 /* SiriAIIndexStatusApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SiriAIIndexStatusApp.swift; sourceTree = "<group>"; };
+		5773E585CAEA025653EB09E4 /* PanelSnapshot.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PanelSnapshot.swift; sourceTree = "<group>"; };
 		6BE3BF5E335E0DD6E1AAFF20 /* IndexStatusWidget.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = IndexStatusWidget.swift; sourceTree = "<group>"; };
 		799B43B05729FB9CF7CD2038 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
 		88CEAD278E8771316133B951 /* StatusPanel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StatusPanel.swift; sourceTree = "<group>"; };
@@ -94,6 +96,7 @@
 			isa = PBXGroup;
 			children = (
 				799B43B05729FB9CF7CD2038 /* Info.plist */,
+				5773E585CAEA025653EB09E4 /* PanelSnapshot.swift */,
 				CB9EB6288E59E9C8F4817B56 /* SiriAIIndexStatus.entitlements */,
 				3B0BDD311C97DA15B69FB682 /* SiriAIIndexStatusApp.swift */,
 				88CEAD278E8771316133B951 /* StatusPanel.swift */,
@@ -245,6 +248,7 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				FEE032EE6633729A380881A2 /* PanelSnapshot.swift in Sources */,
 				8CEA82B82CD72FA1499BA193 /* SiriAIIndexStatusApp.swift in Sources */,
 				CC5490C1F4E57AB6CCC75F26 /* StatusPanel.swift in Sources */,
 				8CB43095DC752A6CADB0A199 /* StatusStore.swift in Sources */,

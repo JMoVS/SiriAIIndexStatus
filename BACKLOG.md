@@ -7,6 +7,21 @@ Work the first unblocked item, top down. **Delete an item when it ships** — no
 
 ## Owed
 
+### WL-13 — Say what the headline is made of, beyond the top three donors
+- Shipped: each pipeline now shows where its missing percentage sits — the three donors holding
+  most of it, what each withholds in points, and whether each one indexed, resized its total, or
+  did nothing. Verified against the live reports: Embedding's missing 52.7 reads Mail 38.9 ·
+  Nextcloud 7.0 · Help Viewer 6.2 · 19 others 0.7. Evidence for why this was needed:
+  `docs/notes/20260911-what-the-headline-percentage-measures.md`.
+- Still owed, both needing a judgement call rather than more arithmetic:
+  - **Apple's own score.** `pipelineCompletenessHeuristicScore` reads 0.6003 where we print 0.4728,
+    and the `all` row's cannot be recomputed from the file. Showing it means showing two
+    percentages that disagree, so it needs wording that says which is which and why.
+  - **A headline that ignores stuck denominators.** `stalledShare` already measures the dead weight
+    (Help Viewer: 6.4% of Embedding, motionless for 17 days). Excluding it needs a rule for "stuck"
+    that is not a Nextcloud/Help Viewer special case — probably "no movement across N reports",
+    which means reading `history.json` rather than one delta.
+
 ### WL-6 — Widget states other than "everything works" are unverified
 - Medium renders real numbers. Still never seen on screen: the small family, the "App not running"
   footer (needs the app quit for an hour), the failure text after a snapshot write error, and the
@@ -51,6 +66,20 @@ Work the first unblocked item, top down. **Delete an item when it ships** — no
   against something that resets, and "100%" would not mean what the panel implies.
 - Cheap test: watch whether `10/4/cs_pc_c` also stops at 100,000. It is at 23,470.
 
+### WL-12 — A partial recompute still reads as a regression
+- The denominator-churn half shipped with WL-13: donors whose eligible set moved further than their
+  indexed count now read `total +12,404` rather than a green item count, and a pipeline where that
+  dominates says so outright. What remains is the sharper case below.
+- 2026-09-04's report recomputes several pipelines from partial state (Keyphrase/Mail
+  49,483 → 9,732 → 49,079 the next day). A single-step delta calls the middle reading a −39k
+  regression, and no per-donor classification helps: the donor really did lose 39k indexed items
+  for one checkpoint. Detecting it needs the checkpoint *after* it, i.e. `history.json`, not the
+  one-step delta.
+- Historical context, measured over 11 checkpoints (2026-08-25 → 09-05): Embedding fell
+  52.1% → 39.9% on 08-31 and recovered to 52.7% on 09-04 purely because Nextcloud's eligible set
+  went 40,485 → 409 → 23,670 items. No embedding work is in that swing; the panel showed it as
+  −40,442 then +25,587.
+
 ### WL-2 — Report freshness is invisible until you open the panel
 - Reports refresh roughly daily, so a menu bar reading can be a day stale with no signal.
 - Show staleness in the menu bar title itself once it exceeds ~36 h (dim the text, or append `?`).
@@ -77,3 +106,12 @@ Work the first unblocked item, top down. **Delete an item when it ships** — no
 - **`mdutil` / daemon-health surface.** Currently only "updater running / idle". Deeper health
   (last journal job, items processed) is only in `log stream`, mostly `<private>`.
 - **Localization.** German UI, given the operator's locale. Strings are currently inline English.
+- **Panel height on a short screen.** The list now scrolls, capped at the screen's visible height
+  less 200 points of chrome, so the window stops at 895 points here whatever is expanded. On a
+  display under ~480 points tall the floor of 280 wins and the panel would still overhang; nobody
+  has such a screen, so this is noted rather than handled.
+- **Seeing the panel.** `SIIS_RENDER_PANEL=<path>` renders it to a PNG and exits, and
+  `SIIS_RENDER_EXPANDED=Embedding,Keyphrase` opens pipelines — both honoured by the live app too.
+  The renderer makes one layout pass, so it draws the list at full length and cannot show the
+  scroll cap; measuring that means reading the running window's size. `ProgressView` and
+  `TextField` also come out as blank blocks. Neither is a defect in the panel.

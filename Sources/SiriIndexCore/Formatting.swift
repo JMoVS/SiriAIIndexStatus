@@ -34,6 +34,13 @@ public enum Formatting {
         return formatter.string(from: max(interval, 60)) ?? "?"
     }
 
+    /// `38.9` — points of a headline percentage, as in "Mail is withholding 38.9 of the missing
+    /// 52.7". Bare, without a `%`: these are parts of a percentage, and printing `38.9%` next to a
+    /// pipeline reading `47.3%` invites reading them as the same kind of quantity.
+    public static func points(_ fraction: Double) -> String {
+        String(format: "%.1f", (fraction * 100).rounded(toPlaces: 1))
+    }
+
     /// `+3,204` / `−12` — a change in items. Always signed, because an unsigned delta beside an
     /// absolute count is unreadable: `3,204` could be either.
     public static func signedItemCount(_ count: Int) -> String {

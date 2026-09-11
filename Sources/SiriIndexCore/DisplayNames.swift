@@ -1,4 +1,6 @@
+import AppKit
 import Foundation
+import os
 
 /// Apple's pipeline and bundle identifiers, made readable. Unknown values fall back to a
 /// mechanical prettifier rather than being hidden — a new pipeline should still show up.
@@ -53,8 +55,34 @@ public enum DisplayNames {
 
     public static func app(for bundleID: String) -> String {
         if let known = apps[bundleID] { return known }
+        if let installed = installedAppName(for: bundleID) { return installed }
         guard let last = bundleID.split(separator: ".").last else { return bundleID }
         return splitCamelCase(String(last))
+    }
+
+    /// Names resolved from LaunchServices, and the identifiers known to resolve to nothing.
+    ///
+    /// A failed lookup is cached as an empty string rather than retried: the panel redraws on every
+    /// refresh, and an app that is not installed is not going to become installed between frames.
+    private static let installedNames = OSAllocatedUnfairLock<[String: String]>(initialState: [:])
+
+    /// Ask LaunchServices what the operator calls this app.
+    ///
+    /// The mechanical fallback turns `com.nextcloud.desktopclient` into "desktopclient", which is
+    /// not a thing anyone has on their Mac. The table above only covers Apple's own bundles, and it
+    /// never will cover the third-party donors — those are whatever the operator installed.
+    private static func installedAppName(for bundleID: String) -> String? {
+        if let cached = installedNames.withLock({ $0[bundleID] }) {
+            return cached.isEmpty ? nil : cached
+        }
+
+        // Outside the lock: this is a LaunchServices round trip, not a dictionary read.
+        let resolved = NSWorkspace.shared.urlForApplication(withBundleIdentifier: bundleID)
+            .map { FileManager.default.displayName(atPath: $0.path) }
+            .map { $0.hasSuffix(".app") ? String($0.dropLast(4)) : $0 }
+
+        installedNames.withLock { $0[bundleID] = resolved ?? "" }
+        return resolved
     }
 
     /// `EventsandordersUrgent` → `Eventsandorders Urgent`. Crude on purpose: it only has to make an

@@ -9,7 +9,7 @@ struct SiriAIIndexStatusApp: App {
 
     var body: some Scene {
         MenuBarExtra {
-            StatusPanel(store: store)
+            StatusPanel(store: store, initiallyExpanded: PanelSnapshot.initiallyExpanded)
         } label: {
             // A menu bar label renders as a template image, so icon + text must be one HStack.
             HStack(spacing: 3) {
@@ -18,7 +18,10 @@ struct SiriAIIndexStatusApp: App {
                     Text(Formatting.compactPercent(headline.completeness))
                 }
             }
-            .task { store.start() }
+            .task {
+                await PanelSnapshot.renderIfRequested(store)
+                store.start()
+            }
         }
         .menuBarExtraStyle(.window)
     }
